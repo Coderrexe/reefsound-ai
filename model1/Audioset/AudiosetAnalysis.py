@@ -53,8 +53,8 @@ def rebin(a, shape):
 class AudiosetAnalysis(object):
     def setup(self):
         # Paths to downloaded VGGish files.
-        self.checkpoint_path = 'vggish_model.ckpt'
-        self.pca_params_path = 'vggish_pca_params.npz'
+        self.checkpoint_path = '../models/vggish_model.ckpt'
+        self.pca_params_path = '../models/vggish_pca_params.npz'
         self.batch_size = 60
 
         # If we can't find the trained model files, download them

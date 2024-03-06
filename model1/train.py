@@ -1,3 +1,4 @@
+from joblib import dump, load
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -7,7 +8,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix
 
 # Features of audio files, obtained by VGGish feature extractor.
-path = "Results/pretrained_CNN_features_10.14.04.csv"
+path = "vggish_features/pretrained_CNN_features_21.08.33.csv"
 num_classes = 2
 labels = ["Healthy", "Degraded"]
 
@@ -185,9 +186,9 @@ def train_test_val_split(df):
 
     # Use the new df to split the deployment ID"s into train/val/test sets
     # Pick 15% (8 deployments) of data as test data
-    validation, the_rest = sklearn.model_selection.train_test_split(df_withclasses, test_size=0.85, stratify=df_withclasses["Class"]) 
+    validation, the_rest = sklearn.model_selection.train_test_split(df_withclasses, test_size=0.85, stratify=df_withclasses["Class"])
     # Pick 0.15*0.85% (8 deployments) of the_rest to be the val data
-    train, test = sklearn.model_selection.train_test_split(the_rest, test_size=0.15, stratify=the_rest["Class"]) 
+    train, test = sklearn.model_selection.train_test_split(the_rest, test_size=0.15, stratify=the_rest["Class"])
 
     # Convert these to numpy arrays
     train_deployments = np.array(train["Deployment"])
@@ -211,34 +212,36 @@ ConfusionMatrix = np.zeros((num_classes, num_classes), dtype=float)
 for i in range(100):
     repeat = i+1
     thisCV_saved_test_accs = []
-    for i in range(1):
-        print("Training cross val: " + str(repeat))
-        train_deployments, val_deployments, test_deployments = train_test_val_split(df)
-        train_files, val_files, test_files = put_files_in_splits(train_deployments, val_deployments, test_deployments)
-        degraded_train_files, healthy_train_files, degraded_val_files, healthy_val_files, degraded_test_files, healthy_test_files = split_by_class(train_files, val_files, test_files)
-        train_feats, train_labels, val_feats, val_labels, test_feats, test_labels  = remake_dfs_for_splits(degraded_train_files, healthy_train_files, 
-                                                                                                        degraded_val_files, healthy_val_files, degraded_test_files, healthy_test_files)
-        
-        print(test_deployments)
-        #accuracy_scores = []
-        val_accuracy_score = 0
-        for k in range(50):  # Picked 50 as 50 epochs was used to train the VGGish
-            model = RandomForestClassifier(n_jobs = -1,random_state=k)
-            # This trains 50 RFs and chooses the best
-            #print("Inferencing on validation data, repeat: " + str(k))
-            model.fit(train_feats, train_labels)
-            new_val_acc = model.score(val_feats, val_labels)
-            print(new_val_acc)
-            if new_val_acc >  val_accuracy_score:
-                val_accuracy_score = new_val_acc
-                test_acc = model.score(test_feats, test_labels)
-                test_predictions = model.predict(test_feats)
-                # Get confusion matrix values
-                best_ConfusionMatrix = confusion_matrix(test_labels, test_predictions, labels = labels)
-            #val_accuracy_scores.append(model.score(val_feats, val_labels))
-        thisCV_saved_test_accs.append(test_acc)
-        all_saved_test_accs.append(test_acc)
-        ConfusionMatrix = np.add(ConfusionMatrix, best_ConfusionMatrix)
+    print("Training cross val: " + str(repeat))
+    train_deployments, val_deployments, test_deployments = train_test_val_split(df)
+    train_files, val_files, test_files = put_files_in_splits(train_deployments, val_deployments, test_deployments)
+    degraded_train_files, healthy_train_files, degraded_val_files, healthy_val_files, degraded_test_files, healthy_test_files = split_by_class(train_files, val_files, test_files)
+    train_feats, train_labels, val_feats, val_labels, test_feats, test_labels  = remake_dfs_for_splits(degraded_train_files, healthy_train_files,
+                                                                                                    degraded_val_files, healthy_val_files, degraded_test_files, healthy_test_files)
+    print(f"Training on {len(train_feats)} samples, validating on {len(val_feats)} samples, testing on {len(test_feats)} samples")
+
+    # print(test_deployments)
+    #accuracy_scores = []
+    val_accuracy_score = 0
+    for k in range(50):  # Picked 50 as 50 epochs was used to train the VGGish
+        model = RandomForestClassifier(n_jobs = -1,random_state=k)
+        # This trains 50 RFs and chooses the best
+        #print("Inferencing on validation data, repeat: " + str(k))
+        model.fit(train_feats, train_labels)
+        # print(f"train accuracy: {model.score(train_feats, train_labels)}")
+        new_val_acc = model.score(val_feats, val_labels)
+        print(new_val_acc)
+        if new_val_acc > val_accuracy_score:
+            val_accuracy_score = new_val_acc
+            test_acc = model.score(test_feats, test_labels)
+            test_predictions = model.predict(test_feats)
+            # Get confusion matrix values
+            best_ConfusionMatrix = confusion_matrix(test_labels, test_predictions, labels=labels)
+            dump(model, f"models/random_forest_model_{repeat}_{k}.joblib")  # Save the model
+        #val_accuracy_scores.append(model.score(val_feats, val_labels))
+    thisCV_saved_test_accs.append(test_acc)
+    all_saved_test_accs.append(test_acc)
+    ConfusionMatrix = np.add(ConfusionMatrix, best_ConfusionMatrix)
     print("Accuracies for cross validation split number: "+ str(repeat))
     print(thisCV_saved_test_accs)
     thisCV_saved_test_accs = []
@@ -270,13 +273,13 @@ plt.xlabel("epoches")
 plt.ylabel("accuracy")
 plt.ylim(0, 1.1)
 
-plt.savefig("models/randomforest_vggish_aug.png")
-plt.show()
+plt.savefig("model_results/vggish_randomforest_accuracy.png")
+# plt.show()
 
 array = np.around(ConfusionMatrix.astype("float") / ConfusionMatrix.sum(axis=1)[:, np.newaxis], 2)
 
-df_cm = pd.DataFrame(array, index = ["Healthy", "Degraded"], columns = ["Healthy", "Degraded"])
-plt.figure(figsize = (10,10))
+df_cm = pd.DataFrame(array, index=["Healthy", "Degraded"], columns=["Healthy", "Degraded"])
+plt.figure(figsize=(10,10))
 cmap = sns.cm.rocket_r
 ax = sns.heatmap(df_cm, annot=True, annot_kws={"fontsize": 25}, fmt="g", cmap=cmap)
 ax.set_xticklabels(ax.get_xmajorticklabels(), fontsize = 25)
@@ -284,4 +287,4 @@ ax.set_yticklabels(ax.get_ymajorticklabels(), fontsize = 25)
 cbar = ax.collections[0].colorbar
 cbar.ax.tick_params(labelsize=20)
 
-plt.savefig("models/vgg_randomforest_aug.png")
+plt.savefig("model_results/vggish_randomforest_confusion_matrix.png")

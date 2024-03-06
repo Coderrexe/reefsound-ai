@@ -4,6 +4,8 @@ D_audio/
 H_audio/
 HD_audio/
 Results/
+vggish_features/
+models/
 __pycache__/
 .ipynb_checkpoints/
 .DS_Store

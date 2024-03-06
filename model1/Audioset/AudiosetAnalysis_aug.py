@@ -2,9 +2,9 @@ import os
 import urllib.request as urllib
 import numpy as np
 import tensorflow as tf
-import vggish_input_aug
-import vggish_params
-import vggish_slim
+from . import vggish_input_aug
+from . import vggish_params
+from . import vggish_slim
 
 '''
 Get an embedding from the AudioSet VGGish network. https://github.com/tensorflow/models/tree/master/research/audioset
@@ -53,8 +53,8 @@ def rebin(a, shape):
 class AudiosetAnalysis(object):
     def setup(self):
         # Paths to downloaded VGGish files.
-        self.checkpoint_path = 'vggish_model.ckpt'
-        self.pca_params_path = 'vggish_pca_params.npz'
+        self.checkpoint_path = 'models/vggish_model.ckpt'
+        self.pca_params_path = 'models/vggish_pca_params.npz'
         self.batch_size = 60
 
         # If we can't find the trained model files, download them

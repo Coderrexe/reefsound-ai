@@ -23,8 +23,8 @@ import os
 
 import matplotlib.pyplot as plt
 
-import mel_features
-import vggish_params
+from . import mel_features
+from . import vggish_params
 
 try:
   def aud_f_read(aud_file):
@@ -97,8 +97,8 @@ def aud_file_to_examples(aud_file):
   #assert aud_data.dtype == np.int16, 'Bad sample type: %r' % aud_data.dtype
   #samples = aud_data / 32768.0  # Convert to [-1.0, +1.0]
 
-  H_dir = "../../data/H_audio"
-  D_dir = "../../data/D_audio"
+  H_dir = "../data/H_audio"
+  D_dir = "../data/D_audio"
   if os.path.basename(aud_file).split(".")[1][4:5] == 'H':
     aud_data_aug1 = same_class_augmentation(aud_data, H_dir)
   elif os.path.basename(aud_file).split(".")[1][4:5] == 'D':
@@ -164,6 +164,6 @@ def speed_numpy(samples, min_speed=0.9, max_speed=1.1):
 
 
 if __name__=='__main__':
-    x1,x2,x3 = aud_file_to_examples("../../data/HD_audio/BaF1.1055H.1678278701.180827.1.1.wav")
+    x1,x2,x3 = aud_file_to_examples("../data/HD_audio/BaF1.1055H.1678278701.180827.1.1.wav")
     # print(x1)
     # print(x2)
